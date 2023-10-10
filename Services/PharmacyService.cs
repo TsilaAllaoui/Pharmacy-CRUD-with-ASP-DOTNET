@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using AutoMapper;
+using Microsoft.AspNetCore.Identity;
+using Pharmacy.Dtos.Medicine;
 using Pharmacy.Models;
 using System.Diagnostics.Metrics;
 using System.Drawing;
@@ -14,19 +16,27 @@ namespace Pharmacy.Services
             new Medicine {Name = "Morphidox", Price = 1000, Quantity = 50, Type = MedicineType.Capsule},
             new Medicine(),
         };
-        public async Task<ServiceResponse<List<Medicine>>> AddMedicine(Medicine medicine)
+
+        private readonly IMapper _mapper;
+
+        public PharmacyService(IMapper mapper)
+        {
+            _mapper = mapper;
+        }
+
+        public async Task<ServiceResponse<List<GetMedicineDto>>> AddMedicine(AddMedicineDto medicine)
         {
             var count = medicines.Count;
-            medicines.Add(medicine);
-            var serviceResponse = new ServiceResponse<List<Medicine>> {
-                Data = medicines,
+            medicines.Add(_mapper.Map<Medicine>(medicine));
+            var serviceResponse = new ServiceResponse<List<GetMedicineDto>> {
+                Data = medicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
                 Message = count < medicines.Count ? "Item added successfully!" : "Error adding item!",
                 Success = count < medicines.Count
             };
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<Medicine>> DeleteMedicine(long id)
+        public async Task<ServiceResponse<GetMedicineDto>> DeleteMedicine(long id)
         {
             var count = medicines.Count;
             var foundMedicine = medicines.FirstOrDefault(medicine => medicine.Id == id);
@@ -37,9 +47,9 @@ namespace Pharmacy.Services
             }
 
             medicines.Remove(foundMedicine);
-            var serviceResponse = new ServiceResponse<Medicine>
+            var serviceResponse = new ServiceResponse<GetMedicineDto>
             {
-                Data = foundMedicine,
+                Data = _mapper.Map<GetMedicineDto>(foundMedicine),
                 Message = count > medicines.Count ? $"Item with id = {id} deleted successfully!" : $"Error deleting item with id = {id}!",
                 Success = count > medicines.Count
             };
@@ -47,11 +57,11 @@ namespace Pharmacy.Services
             return serviceResponse; 
         }
 
-        public async Task<ServiceResponse<List<Medicine>>> GetMedicines()
+        public async Task<ServiceResponse<List<GetMedicineDto>>> GetMedicines()
         {
-            var serviceResponse = new ServiceResponse<List<Medicine>>
+            var serviceResponse = new ServiceResponse<List<GetMedicineDto>>
             {
-                Data = medicines,
+                Data = medicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
                 Message = medicines.Count > 0 ? "Items fetched successfully!" : "No item found!",
                 Success = true
             };
@@ -59,7 +69,7 @@ namespace Pharmacy.Services
             return serviceResponse;
         }
 
-        public async Task<ServiceResponse<Medicine>> GetSingleById(long id)
+        public async Task<ServiceResponse<GetMedicineDto>> GetSingleById(long id)
         {
 
             var foundMedicine = medicines.FirstOrDefault(medicine => medicine.Id == id);
@@ -68,9 +78,9 @@ namespace Pharmacy.Services
                 throw new Exception($"No item with specific Id = {id} found!");
             }
 
-            var serviceResponse = new ServiceResponse<Medicine>
+            var serviceResponse = new ServiceResponse<GetMedicineDto>
             {
-                Data = foundMedicine,
+                Data = _mapper.Map<GetMedicineDto>(foundMedicine),
                 Message = foundMedicine is not null ? $"Item with id = {id} found successfully!" : $"Item with id = {id} not found!",
                 Success = foundMedicine is not null
             };
