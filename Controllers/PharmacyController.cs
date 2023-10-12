@@ -23,7 +23,7 @@ namespace Pharmacy.Controllers
         [HttpGet("GetAll")]
         public async Task<ActionResult<List<GetMedicineDto>>> GetMedicines()
         {
-            return Ok(await _pharmacyService.GetMedicines());
+            return Ok(await _pharmacyService.GetAllMedicines());
         }
 
         [HttpGet("{id}")]
@@ -39,11 +39,17 @@ namespace Pharmacy.Controllers
             return Ok(await _pharmacyService.AddMedicine(medicine));
         }
 
-        // DELETE Requet
+        // DELETE Requets
         [HttpDelete("{id}")]
         public async Task<ActionResult<List<GetMedicineDto>>> DeleteMedicine(long id)
         {
             return Ok(await _pharmacyService.DeleteMedicine(id));
+        }
+
+        [HttpDelete]
+        public async Task<ActionResult<List<GetMedicineDto>>> DeleteAllMedicine()
+        {
+            return Ok(await _pharmacyService.DeleteAllMedicine());
         }
 
         // PUT Request

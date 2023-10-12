@@ -1,5 +1,7 @@
 ﻿using AutoMapper;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.EntityFrameworkCore;
+using Pharmacy.Data;
 using Pharmacy.Dtos.Medicine;
 using Pharmacy.Models;
 using System.Diagnostics.Metrics;
@@ -18,117 +20,207 @@ namespace Pharmacy.Services
         };
 
         private readonly IMapper _mapper;
+        private readonly DataContext _context;
 
-        public PharmacyService(IMapper mapper)
+        public PharmacyService(IMapper mapper, DataContext context)
         {
             _mapper = mapper;
+            _context = context;
         }
 
         public async Task<ServiceResponse<List<GetMedicineDto>>> AddMedicine(AddMedicineDto medicine)
         {
-            var count = medicines.Count;
-            var newMedicine = _mapper.Map<Medicine>(medicine);
-            newMedicine.Id = medicines.Max(med => med.Id) + 1;
-            medicines.Add(newMedicine);
-            var serviceResponse = new ServiceResponse<List<GetMedicineDto>> {
-                Data = medicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
-                Message = count < medicines.Count ? "Item added successfully!" : "Error adding item!",
-                Success = count < medicines.Count
-            };
-            return serviceResponse;
+            try
+            {
+                var newMedicine = _mapper.Map<Medicine>(medicine);
+                _context.Medicines.Add(newMedicine);
+                await _context.SaveChangesAsync();
+                var dbMedicines = await _context.Medicines.ToListAsync();
+                var serviceResponse = new ServiceResponse<List<GetMedicineDto>> {
+                    Data = dbMedicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
+                    Message = "Item added successfully!",
+                    Success = true
+                };
+                return serviceResponse;
+            }
+            catch(Exception e)
+            {
+                return new ServiceResponse<List<GetMedicineDto>>
+                {
+                    Message = "Error adding item to db: " + e.Message,
+                    Success = false
+                };
+            }
         }
 
         public async Task<ServiceResponse<GetMedicineDto>> DeleteMedicine(long id)
         {
-            var count = medicines.Count;
-            var foundMedicine = medicines.FirstOrDefault(medicine => medicine.Id == id);
 
-            if (foundMedicine is null)
+            try
             {
-                var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                var foundMedicine = await _context.Medicines.FindAsync(id);
+                if (foundMedicine is null)
                 {
-                    Message = $"No item with specific Id = {id} found!",
-                    Success = false,
+                    var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                    {
+                        Message = $"No item with specific Id = {id} found!",
+                        Success = false,
+                    };
+
+                    return serviceResponceWithError;
+                }
+
+                _context.Medicines.Remove(foundMedicine);
+                await _context.SaveChangesAsync();
+
+                var serviceResponse = new ServiceResponse<GetMedicineDto>
+                {
+                    Data = _mapper.Map<GetMedicineDto>(foundMedicine),
+                    Message = $"Item with id = {id} deleted successfully!",
+                    Success = true
                 };
 
-                return serviceResponceWithError;
+                return serviceResponse;
             }
-
-            medicines.Remove(foundMedicine);
-            var serviceResponse = new ServiceResponse<GetMedicineDto>
+            catch (Exception e)
             {
-                Data = _mapper.Map<GetMedicineDto>(foundMedicine),
-                Message = count > medicines.Count ? $"Item with id = {id} deleted successfully!" : $"Error deleting item with id = {id}!",
-                Success = count > medicines.Count
-            };
-
-            return serviceResponse; 
+                return new ServiceResponse<GetMedicineDto>
+                {
+                    Message = "Error deleting item:" + e.Message,
+                    Success = false,
+                };
+            }
         }
 
-        public async Task<ServiceResponse<List<GetMedicineDto>>> GetMedicines()
+        public async Task<ServiceResponse<List<GetMedicineDto>>> DeleteAllMedicine()
         {
-            var serviceResponse = new ServiceResponse<List<GetMedicineDto>>
+            try
             {
-                Data = medicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
-                Message = medicines.Count > 0 ? "Items fetched successfully!" : "No item found!",
-                Success = true
-            };
 
-            return serviceResponse;
+                var medicines = await _context.Medicines.ToListAsync();
+                _context.Medicines.RemoveRange(medicines);
+                await _context.SaveChangesAsync();
+                await _context.SaveChangesAsync();
+
+                var serviceResponse = new ServiceResponse<List<GetMedicineDto>>
+                {
+                    Message = $"All items deleted successfully!",
+                    Success = true
+                };
+
+                return serviceResponse;
+            }
+            catch (Exception e)
+            {
+                return new ServiceResponse<List<GetMedicineDto>>
+                {
+                    Message = "Error deleting all items:" + e.Message,
+                    Success = false,
+                };
+            }
+        }
+
+        public async Task<ServiceResponse<List<GetMedicineDto>>> GetAllMedicines()
+        {
+            try
+            {
+                var dbMedicines = await _context.Medicines.ToListAsync();
+                var serviceResponse = new ServiceResponse<List<GetMedicineDto>>
+                {
+                    Data = dbMedicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
+                    Message = medicines.Count > 0 ? "Items fetched successfully!" : "No item found!",
+                    Success = true
+                };
+
+                return serviceResponse;
+            }
+            catch (Exception e)
+            {
+                return new ServiceResponse<List<GetMedicineDto>>
+                {
+                    Message = "Error getting items:" + e.Message,
+                    Success = false,
+                };
+            }
         }
 
         public async Task<ServiceResponse<GetMedicineDto>> GetSingleById(long id)
         {
-
-            var foundMedicine = medicines.FirstOrDefault(medicine => medicine.Id == id);
-            if (foundMedicine is null)
+            try
             {
-                var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                var foundMedicine = await _context.Medicines.FindAsync(id);
+                if (foundMedicine is null)
                 {
-                    Message = $"No item with specific Id = {id} found!",
-                    Success = false,
+                    var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                    {
+                        Message = $"No item with specific Id = {id} found!",
+                        Success = false,
+                    };
+
+                    return serviceResponceWithError;
+                }
+
+                var serviceResponse = new ServiceResponse<GetMedicineDto>
+                {
+                    Data = _mapper.Map<GetMedicineDto>(foundMedicine),
+                    Message = foundMedicine is not null ? $"Item with id = {id} found successfully!" : $"Item with id = {id} not found!",
+                    Success = foundMedicine is not null
                 };
 
-                return serviceResponceWithError;
+                return serviceResponse;
             }
-
-            var serviceResponse = new ServiceResponse<GetMedicineDto>
+            catch (Exception e)
             {
-                Data = _mapper.Map<GetMedicineDto>(foundMedicine),
-                Message = foundMedicine is not null ? $"Item with id = {id} found successfully!" : $"Item with id = {id} not found!",
-                Success = foundMedicine is not null
-            };
-
-            return serviceResponse;
+                return new ServiceResponse<GetMedicineDto>
+                {
+                    Message = "Error getting item:" + e.Message,
+                    Success = false,
+                };
+            }
         }
 
         public async Task<ServiceResponse<GetMedicineDto>> UpdateMedicine(Medicine medicine)
         {
-            var foundMedicine = medicines.Find(med => med.Id == medicine.Id);
-            if (foundMedicine is null )
+            try
             {
-                var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                var foundMedicine = await _context.Medicines.FindAsync(medicine.Id);
+                if (foundMedicine is null)
                 {
-                    Message = $"No item with Id = {medicine.Id} found!",
-                    Success = false,
+                    var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                    {
+                        Message = $"No item with Id = {medicine.Id} found!",
+                        Success = false,
+                    };
+
+                    return serviceResponceWithError;
+                }
+
+                foundMedicine.Quantity = medicine.Quantity;
+                foundMedicine.Price = medicine.Price;
+                foundMedicine.Name = medicine.Name;
+                foundMedicine.Type = medicine.Type;
+
+                _context.Medicines.Update(foundMedicine);
+                await _context.SaveChangesAsync();
+
+
+                var serviceResponce = new ServiceResponse<GetMedicineDto>
+                {
+                    Data = _mapper.Map<GetMedicineDto>(foundMedicine),
+                    Message = $"Item with Id = {medicine.Id} updated successfully!",
+                    Success = true
                 };
 
-                return serviceResponceWithError;
+                return serviceResponce;
             }
-
-            foundMedicine.Quantity = medicine.Quantity;
-            foundMedicine.Price = medicine.Price;
-            foundMedicine.Name = medicine.Name;
-            foundMedicine.Type = medicine.Type;
-
-            var serviceResponce = new ServiceResponse<GetMedicineDto>
+            catch (Exception e)
             {
-                Data = _mapper.Map<GetMedicineDto>(foundMedicine),
-                Message = $"Item with Id = {medicine.Id} updated successfully!",
-                Success = true
-            };
-
-            return serviceResponce;
+                return new ServiceResponse<GetMedicineDto>
+                {
+                    Message = "Error getting item:" + e.Message,
+                    Success = false,
+                };
+            }
         }
     }
 }
