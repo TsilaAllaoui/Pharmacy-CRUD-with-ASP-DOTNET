@@ -13,8 +13,8 @@ namespace Pharmacy.Services
         private readonly List<Medicine> medicines = new List<Medicine>
         {
             new Medicine {Id = 1, Name = "Aquavirine", Price = 1500, Quantity = 100, Type = MedicineType.Liquid},
-            new Medicine {Name = "Morphidox", Price = 1000, Quantity = 50, Type = MedicineType.Capsule},
-            new Medicine(),
+            new Medicine {Id = 2, Name = "Morphidox", Price = 1000, Quantity = 50, Type = MedicineType.Capsule},
+            new Medicine {Id = 3, Name = "Paraquine", Price = 700, Quantity = 25, Type = MedicineType.Tablet},
         };
 
         private readonly IMapper _mapper;
@@ -27,7 +27,9 @@ namespace Pharmacy.Services
         public async Task<ServiceResponse<List<GetMedicineDto>>> AddMedicine(AddMedicineDto medicine)
         {
             var count = medicines.Count;
-            medicines.Add(_mapper.Map<Medicine>(medicine));
+            var newMedicine = _mapper.Map<Medicine>(medicine);
+            newMedicine.Id = medicines.Max(med => med.Id) + 1;
+            medicines.Add(newMedicine);
             var serviceResponse = new ServiceResponse<List<GetMedicineDto>> {
                 Data = medicines.Select(med => _mapper.Map<GetMedicineDto>(med)).ToList(),
                 Message = count < medicines.Count ? "Item added successfully!" : "Error adding item!",
