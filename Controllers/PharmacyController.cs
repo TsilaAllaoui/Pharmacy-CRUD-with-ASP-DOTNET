@@ -45,5 +45,12 @@ namespace Pharmacy.Controllers
         {
             return Ok(await _pharmacyService.DeleteMedicine(id));
         }
+
+        // PUT Request
+        [HttpPut]
+        public async Task<ActionResult<GetMedicineDto>> UpdateMedicine(Medicine medicine)
+        {
+            return Ok(await _pharmacyService.UpdateMedicine( medicine));
+        }
     }
 }

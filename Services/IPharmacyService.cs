@@ -10,6 +10,8 @@ namespace Pharmacy.Services
         Task<ServiceResponse<GetMedicineDto>> GetSingleById(long id);
         Task<ServiceResponse<List<GetMedicineDto>>> AddMedicine(AddMedicineDto medicine);
         Task<ServiceResponse<GetMedicineDto>> DeleteMedicine(long id);
+
+        Task<ServiceResponse<GetMedicineDto>> UpdateMedicine(Medicine medicine);
     }
 }
  

@@ -45,7 +45,13 @@ namespace Pharmacy.Services
 
             if (foundMedicine is null)
             {
-                throw new Exception($"No item with specific Id = {id} found!");
+                var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                {
+                    Message = $"No item with specific Id = {id} found!",
+                    Success = false,
+                };
+
+                return serviceResponceWithError;
             }
 
             medicines.Remove(foundMedicine);
@@ -77,7 +83,13 @@ namespace Pharmacy.Services
             var foundMedicine = medicines.FirstOrDefault(medicine => medicine.Id == id);
             if (foundMedicine is null)
             {
-                throw new Exception($"No item with specific Id = {id} found!");
+                var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                {
+                    Message = $"No item with specific Id = {id} found!",
+                    Success = false,
+                };
+
+                return serviceResponceWithError;
             }
 
             var serviceResponse = new ServiceResponse<GetMedicineDto>
@@ -88,6 +100,35 @@ namespace Pharmacy.Services
             };
 
             return serviceResponse;
+        }
+
+        public async Task<ServiceResponse<GetMedicineDto>> UpdateMedicine(Medicine medicine)
+        {
+            var foundMedicine = medicines.Find(med => med.Id == medicine.Id);
+            if (foundMedicine is null )
+            {
+                var serviceResponceWithError = new ServiceResponse<GetMedicineDto>
+                {
+                    Message = $"No item with Id = {medicine.Id} found!",
+                    Success = false,
+                };
+
+                return serviceResponceWithError;
+            }
+
+            foundMedicine.Quantity = medicine.Quantity;
+            foundMedicine.Price = medicine.Price;
+            foundMedicine.Name = medicine.Name;
+            foundMedicine.Type = medicine.Type;
+
+            var serviceResponce = new ServiceResponse<GetMedicineDto>
+            {
+                Data = _mapper.Map<GetMedicineDto>(foundMedicine),
+                Message = $"Item with Id = {medicine.Id} updated successfully!",
+                Success = true
+            };
+
+            return serviceResponce;
         }
     }
 }
